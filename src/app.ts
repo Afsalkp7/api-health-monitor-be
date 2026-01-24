@@ -6,7 +6,6 @@ import morgan from 'morgan';
 
 const app: Application = express();
 
-
 // Global Middleware
 app.use(helmet());
 app.use(cors({
@@ -20,7 +19,6 @@ app.use(morgan('dev'));
 // Body Parser (Read JSON data from requests)
 app.use(express.json());
 
-
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'success',
@@ -28,7 +26,6 @@ app.get('/', (req: Request, res: Response) => {
     timestamp: new Date().toISOString()
   });
 });
-
 
 // 404 Handler 
 app.use((req: Request, res: Response) => { 
