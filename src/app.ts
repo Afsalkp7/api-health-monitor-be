@@ -3,6 +3,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import responseHandler from './utils/response/responseHandler';
 
 const app: Application = express();
 
@@ -13,6 +14,8 @@ app.use(cors({
   credentials: true
 }));
 
+app.use((req, res, next) => responseHandler(req, res, next));
+
 // HTTP Request Logger
 app.use(morgan('dev'));
 
@@ -20,14 +23,10 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Cloudtstack api monitor Server is Running successfully!',
-    timestamp: new Date().toISOString()
-  });
+  res.success({ message: 'Cloudtstack api monitor Server is Running successfully!' })
 });
 
-// 404 Handler 
+// 404 Handler
 app.use((req: Request, res: Response) => { 
   res.status(404).json({
     status: 'error',
