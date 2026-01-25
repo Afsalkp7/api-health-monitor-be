@@ -4,6 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import responseHandler from './utils/response/responseHandler';
+import indexRouter from './routes/index';
+import errorHandler from './middlewares/errorHandler';
 
 const app: Application = express();
 
@@ -22,16 +24,19 @@ app.use(morgan('dev'));
 // Body Parser (Read JSON data from requests)
 app.use(express.json());
 
+
 app.get('/', (req: Request, res: Response) => {
-  res.success({ message: 'Cloudtstack api monitor Server is Running successfully!' })
+  res.success({ message: 'Cloudstack api monitor Server is Running successfully!' })
 });
 
+app.use('/', indexRouter);
+
+// Error Handler
+app.use(errorHandler);
+
 // 404 Handler
-app.use((req: Request, res: Response) => { 
-  res.status(404).json({
-    status: 'error',
-    message: `Can't find ${req.originalUrl} on this server!`
-  });
+app.use((req: Request, res: Response) => {
+  res.recordNotFound({ message: `Url ${req.originalUrl} not found` });
 });
 
 export default app;
