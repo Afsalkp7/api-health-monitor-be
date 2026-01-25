@@ -59,8 +59,8 @@ const monitorSchema: Schema<IMonitor> = new Schema(
     frequency: {
       type: Number,
       required: true,
-      default: 300,
-      enum: [60, 300, 600, 1800],
+      default: 60,
+      enum: [ 10, 20, 60, 300, 600, 1800],
     },
     timeout: {
       type: Number,
