@@ -77,10 +77,10 @@ export const loginUser = async (
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
-
+    
     res.success({
       message: "Login successful.",
-      data: { user: data.user, accessToken: data.accessToken },
+      data: { user: data.user, accessToken: data.accessToken , refreshToken: data.refreshToken },
     });
   } catch (error) {
     next(error);
@@ -94,11 +94,11 @@ export const getAccessToken = async (
   next: NextFunction,
 ) => {
   try {
-    const { refreshToken } = req.cookies; // Get from cookie
+    const { refreshToken } = req.cookies|| req.body?.refreshToken; // Get from cookie
     if (!refreshToken) throw new Error("Refresh Token Required");
 
     const accessToken = await AuthService.refreshAccessToken(refreshToken);
-    res.success({ data: { accessToken } });
+    res.success({ data: { accessToken, refreshToken } });
   } catch (error) {
     next(error);
   }

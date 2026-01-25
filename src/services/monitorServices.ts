@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Monitor, { IMonitor } from '../models/monitor';
 import PingLog from '../models/pingLog';
 
@@ -16,9 +17,52 @@ export const createMonitorService = async (
 
 // Get all monitors for a specific user
 export const getMonitorsService = async (userId: string) => {
-  return await Monitor.find({ user: userId, isDeleted: false })
-    .select('-headers') // Security: Hide encrypted headers
-    .sort({ createdAt: -1 });
+  const monitors = await Monitor.aggregate([
+    { 
+      $match: { 
+        user: new mongoose.Types.ObjectId(userId), 
+        isDeleted: false 
+      } 
+    },
+    
+    {
+      $lookup: {
+        from: 'pinglogs', // The collection name in MongoDB (usually lowercase plural)
+        let: { monitorId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$monitorId', '$$monitorId'] } } },
+          { $sort: { createdAt: -1 } },
+          { $limit: 20 },
+           { $project: { 
+              // CONDITIONAL LOGIC:
+              responseTime: {
+                $cond: {
+                  if: { $eq: ["$status", "UP"] }, // Check if status is "UP"
+                  then: "$responseTime",          // If yes, keep actual latency
+                  else: 0                         // If "DOWN" or "TIMEOUT", force 0
+                }
+              },
+              _id: 0 
+            }}
+        ],
+        as: 'recentLogs'
+      }
+    },
+
+    { $sort: { createdAt: -1 } }
+  ]);
+
+  // Transform Data to match Frontend Interface exactly
+  return monitors.map((m) => ({
+    id: m._id,
+    name: m.friendlyName,
+    status: m.status,
+    method: m.method,
+    url: m.url,
+    currentLatency: m.responseTime || 0,
+    uptime7d: m.recentLogs.map((l: any) => l.responseTime).reverse(),
+    lastChecked: m.lastChecked,
+  }));
 };
 
 // Get a single monitor by ID (Owned by user)
