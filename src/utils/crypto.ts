@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
+
 const IV_LENGTH = 16;
 
 if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
