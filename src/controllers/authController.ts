@@ -17,6 +17,34 @@ export const register = async (
 };
 
 // 2. Verify OTP
+// export const verifyOtp = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { email, otp } = req.body;
+//     const data = await AuthService.verifyUserOtp(email, otp);
+
+//     // Set the Refresh Token Cookie so the user is truly "logged in"
+//     res.cookie("refreshToken", data.refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "strict",
+//       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+
+//     res.success({
+//       message: "Email verified successfully.",
+//       data: {
+//         user: data.user,
+//         accessToken: data.accessToken,
+//       },
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 export const verifyOtp = async (
   req: Request,
   res: Response,
@@ -26,7 +54,7 @@ export const verifyOtp = async (
     const { email, otp } = req.body;
     const data = await AuthService.verifyUserOtp(email, otp);
 
-    // Set the Refresh Token Cookie so the user is truly "logged in"
+    // Set HTTP-Only Cookie
     res.cookie("refreshToken", data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -39,12 +67,15 @@ export const verifyOtp = async (
       data: {
         user: data.user,
         accessToken: data.accessToken,
+        refreshToken: data.refreshToken, // <--- ADDED: Critical for NextAuth
+        expiresIn: data.expiresIn        // <--- ADDED: Critical for NextAuth
       },
     });
   } catch (error) {
     next(error);
   }
 };
+
 
 // 3. Resend OTP
 export const sendOtp = async (
@@ -62,6 +93,31 @@ export const sendOtp = async (
 };
 
 // 4. Login User
+// export const loginUser = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { email, password } = req.body;
+//     const data = await AuthService.loginUser(email, password);
+
+//     res.cookie("refreshToken", data.refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "strict",
+//       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+    
+//     res.success({
+//       message: "Login successful.",
+//       data: { user: data.user, accessToken: data.accessToken , refreshToken: data.refreshToken },
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 export const loginUser = async (
   req: Request,
   res: Response,
@@ -71,16 +127,22 @@ export const loginUser = async (
     const { email, password } = req.body;
     const data = await AuthService.loginUser(email, password);
 
+    // Set HTTP-Only Cookie (Good for browser security)
     res.cookie("refreshToken", data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
-    
+
     res.success({
       message: "Login successful.",
-      data: { user: data.user, accessToken: data.accessToken , refreshToken: data.refreshToken },
+      data: { 
+        user: data.user, 
+        accessToken: data.accessToken, 
+        refreshToken: data.refreshToken, // Frontend needs this for NextAuth session
+        expiresIn: data.expiresIn        // Frontend needs this for expiry calculation
+      },
     });
   } catch (error) {
     next(error);
@@ -88,17 +150,55 @@ export const loginUser = async (
 };
 
 // 5. Get New Access Token (Refresh)
+// export const getAccessToken = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { refreshToken } = req.cookies|| req.body?.refreshToken; // Get from cookie
+//     if (!refreshToken) throw new Error("Refresh Token Required");
+
+//     const accessToken = await AuthService.refreshAccessToken(refreshToken);
+//     res.success({ data: { accessToken, refreshToken } });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 export const getAccessToken = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const { refreshToken } = req.cookies|| req.body?.refreshToken; // Get from cookie
-    if (!refreshToken) throw new Error("Refresh Token Required");
+    // Check Cookies FIRST, then check Body (Support both Browser & NextAuth server-side calls)
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
-    const accessToken = await AuthService.refreshAccessToken(refreshToken);
-    res.success({ data: { accessToken, refreshToken } });
+    if (!incomingRefreshToken) {
+      throw new Error("Refresh Token Required");
+    }
+
+    // Call Service
+    const data = await AuthService.refreshAccessToken(incomingRefreshToken);
+
+    // Set the NEW Refresh Token as a cookie (Rotation)
+    res.cookie("refreshToken", data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Return the tokens to the client
+    res.success({ 
+      message: "Token refreshed.",
+      data: { 
+        accessToken: data.accessToken, 
+        refreshToken: data.refreshToken, // Send back new rotation token
+        expiresIn: data.expiresIn 
+      } 
+    });
   } catch (error) {
     next(error);
   }
