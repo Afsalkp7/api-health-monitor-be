@@ -33,7 +33,7 @@ export const monitorSchema = Joi.object({
     .valid(10, 20, 60, 300, 600, 1800)
     .required()
     .messages({
-      "any.only": "Frequency must be 60, 300, 600, or 1800 seconds",
+      "any.only": "Frequency must be 10, 20, 60, 300, 600, or 1800 seconds",
     }),
 
   timeout: Joi.number().min(1000).max(30000).default(5000),
@@ -68,8 +68,8 @@ export const monitorUpdateSchema = Joi.object({
   body: Joi.any().default({}), // Allows any JSON structure
 
   // Only allow specific intervals (1m, 5m, 10m, 30m)
-  frequency: Joi.number().valid(60, 300, 600, 1800).messages({
-    "any.only": "Frequency must be 60, 300, 600, or 1800 seconds",
+  frequency: Joi.number().valid(10, 20, 60, 300, 600, 1800).messages({
+    "any.only": "Frequency must be 10, 20, 60, 300, 600, or 1800 seconds",
   }),
 
   timeout: Joi.number().min(1000).max(30000).default(5000),

@@ -5,6 +5,10 @@ import jwt from "jsonwebtoken";
 // import { sendEmail } from '../utils/emailSender'; // We will create this later
 import AppError from "../utils/appError"; // Custom Error Class we made earlier
 
+const ACCESS_TOKEN_EXPIRY = "15m";
+const REFRESH_TOKEN_EXPIRY = "7d";
+const ACCESS_TOKEN_EXPIRY_SECONDS = 15 * 60;
+
 // Helper: Generate OTP
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
@@ -66,26 +70,14 @@ export const verifyUserOtp = async (email: string, otp: string) => {
   user.otpExpires = undefined;
   await user.save();
 
-  const accessToken = jwt.sign(
-    { id: user._id },
-    process.env.JWT_SECRET as string,
-    { expiresIn: "15m" },
-  );
-
-  const refreshToken = jwt.sign(
-    { id: user._id },
-    process.env.JWT_REFRESH_SECRET as string,
-    { expiresIn: "7d" },
-  );
+  const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: REFRESH_TOKEN_EXPIRY });
 
   return {
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-    },
+    user: { id: user._id, name: user.name, email: user.email },
     accessToken,
     refreshToken,
+    expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS, // <--- ADDED THIS
   };
 };
 
@@ -99,39 +91,49 @@ export const loginUser = async (email: string, pass: string) => {
   if (!isMatch) throw new AppError("Invalid credentials", 401);
 
   // Generate Tokens
-  const accessToken = jwt.sign(
-    { id: user._id },
-    process.env.JWT_SECRET as string,
-    { expiresIn: "15m" },
-  );
-  const refreshToken = jwt.sign(
-    { id: user._id },
-    process.env.JWT_REFRESH_SECRET as string,
-    { expiresIn: "7d" },
-  );
+  const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: REFRESH_TOKEN_EXPIRY });
 
   return {
     user: { id: user._id, name: user.name, email: user.email },
     accessToken,
     refreshToken,
+    expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS, // <--- ADDED THIS
   };
 };
 
 // 4. Refresh Token Logic
 export const refreshAccessToken = async (token: string) => {
   try {
-    const decoded: any = jwt.verify(
-      token,
-      process.env.JWT_REFRESH_SECRET as string,
-    );
-    const accessToken = jwt.sign(
-      { id: decoded.id },
+    // 1. Verify the old Refresh Token
+    const decoded: any = jwt.verify(token, process.env.JWT_REFRESH_SECRET as string);
+    
+    // 2. Check if user still exists (Security Check)
+    const user = await User.findById(decoded.id);
+    if (!user) throw new AppError("User belonging to this token no longer exists", 401);
+
+    // 3. Issue NEW Access Token
+    const newAccessToken = jwt.sign(
+      { id: user._id },
       process.env.JWT_SECRET as string,
-      { expiresIn: "15m" },
+      { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
-    return accessToken;
+
+    // 4. Issue NEW Refresh Token (Rotation - Optional but recommended)
+    const newRefreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET as string,
+      { expiresIn: REFRESH_TOKEN_EXPIRY }
+    );
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken, // Send new refresh token
+      expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS // Send expiry seconds
+    };
+
   } catch (error) {
-    throw new AppError("Invalid Refresh Token", 401);
+    throw new AppError("Invalid or Expired Refresh Token", 401);
   }
 };
 
