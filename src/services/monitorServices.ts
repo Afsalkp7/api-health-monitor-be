@@ -222,3 +222,50 @@ export const getRecentPingsData = async (monitorId : string) => {
       .sort({ createdAt: -1 })
       .limit(5);
 }
+
+
+export const getDashboardData = async () => {
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // 1. Get GLOBAL Monitor Counts
+    const [totalMonitors, activeMonitors] = await Promise.all([
+      Monitor.countDocuments({ isDeleted: false }), // Removed user filter
+      Monitor.countDocuments({ isActive: true, isDeleted: false }), // Removed user filter
+    ]);
+
+    // 2. Aggregate GLOBAL Stats (Across All Users)
+    const statsAggregation = await PingLog.aggregate([
+      { 
+        $match: { 
+          // REMOVED: user: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: twentyFourHoursAgo } 
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          totalPings: { $sum: 1 },
+          upPings: { $sum: { $cond: [{ $eq: ["$status", "UP"] }, 1, 0] } },
+          totalLatency: { $sum: "$responseTime" }
+        }
+      }
+    ]);
+
+    const stats = statsAggregation[0] || { totalPings: 0, upPings: 0, totalLatency: 0 };
+
+    const globalUptime = stats.totalPings > 0 
+      ? (stats.upPings / stats.totalPings) * 100 
+      : 0;
+
+    const avgLatency = stats.upPings > 0 
+      ? stats.totalLatency / stats.upPings 
+      : 0;
+
+      return {
+        globalUptime: Number(globalUptime.toFixed(2)),
+        avgLatency: Math.round(avgLatency),
+        totalMonitors,
+        activeMonitors
+      }
+}

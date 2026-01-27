@@ -3,7 +3,8 @@ import User from "../models/user";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 // import { sendEmail } from '../utils/emailSender'; // We will create this later
-import AppError from "../utils/appError"; // Custom Error Class we made earlier
+import AppError from "../utils/appError";
+import { sendEmail } from "./emailService";
 
 const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY = "7d";
@@ -38,6 +39,21 @@ export const registerUser = async (userData: any) => {
 
     console.log(`[DEV MODE] New OTP for pending user ${email}: ${otp}`);
 
+    await sendEmail(
+      email,
+      "Your CloudStack Verification Code",
+      `
+  <div style="font-family: sans-serif; text-align: center;">
+    <h2>Verification Required</h2>
+    <p>Use the code below to verify your account.</p>
+    <h1 style="font-size: 32px; letter-spacing: 5px; color: #4f46e5;">${otp}</h1>
+    <p>This code expires in 10 minutes.</p>
+  </div>
+  `,
+    );
+
+    console.log(`[DEV MODE] OTP for ${email}: ${otp}`);
+
     return { id: existingUser._id, email: existingUser.email };
   }
 
@@ -49,6 +65,18 @@ export const registerUser = async (userData: any) => {
     otpExpires,
     isVerified: false,
   });
+  await sendEmail(
+    email,
+    "Your CloudStack Verification Code",
+    `
+  <div style="font-family: sans-serif; text-align: center;">
+    <h2>Verification Required</h2>
+    <p>Use the code below to verify your account.</p>
+    <h1 style="font-size: 32px; letter-spacing: 5px; color: #4f46e5;">${otp}</h1>
+    <p>This code expires in 10 minutes.</p>
+  </div>
+  `,
+  );
 
   console.log(`[DEV MODE] OTP for ${email}: ${otp}`);
 
@@ -70,8 +98,16 @@ export const verifyUserOtp = async (email: string, otp: string) => {
   user.otpExpires = undefined;
   await user.save();
 
-  const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, { expiresIn: ACCESS_TOKEN_EXPIRY });
-  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  const accessToken = jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET as string,
+    { expiresIn: ACCESS_TOKEN_EXPIRY },
+  );
+  const refreshToken = jwt.sign(
+    { id: user._id },
+    process.env.JWT_REFRESH_SECRET as string,
+    { expiresIn: REFRESH_TOKEN_EXPIRY },
+  );
 
   return {
     user: { id: user._id, name: user.name, email: user.email },
@@ -91,8 +127,16 @@ export const loginUser = async (email: string, pass: string) => {
   if (!isMatch) throw new AppError("Invalid credentials", 401);
 
   // Generate Tokens
-  const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, { expiresIn: ACCESS_TOKEN_EXPIRY });
-  const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  const accessToken = jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET as string,
+    { expiresIn: ACCESS_TOKEN_EXPIRY },
+  );
+  const refreshToken = jwt.sign(
+    { id: user._id },
+    process.env.JWT_REFRESH_SECRET as string,
+    { expiresIn: REFRESH_TOKEN_EXPIRY },
+  );
 
   return {
     user: { id: user._id, name: user.name, email: user.email },
@@ -106,32 +150,35 @@ export const loginUser = async (email: string, pass: string) => {
 export const refreshAccessToken = async (token: string) => {
   try {
     // 1. Verify the old Refresh Token
-    const decoded: any = jwt.verify(token, process.env.JWT_REFRESH_SECRET as string);
-    
+    const decoded: any = jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET as string,
+    );
+
     // 2. Check if user still exists (Security Check)
     const user = await User.findById(decoded.id);
-    if (!user) throw new AppError("User belonging to this token no longer exists", 401);
+    if (!user)
+      throw new AppError("User belonging to this token no longer exists", 401);
 
     // 3. Issue NEW Access Token
     const newAccessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET as string,
-      { expiresIn: ACCESS_TOKEN_EXPIRY }
+      { expiresIn: ACCESS_TOKEN_EXPIRY },
     );
 
     // 4. Issue NEW Refresh Token (Rotation - Optional but recommended)
     const newRefreshToken = jwt.sign(
       { id: user._id },
       process.env.JWT_REFRESH_SECRET as string,
-      { expiresIn: REFRESH_TOKEN_EXPIRY }
+      { expiresIn: REFRESH_TOKEN_EXPIRY },
     );
 
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken, // Send new refresh token
-      expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS // Send expiry seconds
+      expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS, // Send expiry seconds
     };
-
   } catch (error) {
     throw new AppError("Invalid or Expired Refresh Token", 401);
   }
@@ -147,7 +194,19 @@ export const requestPasswordReset = async (email: string) => {
   user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
   await user.save();
 
-  // TODO: await sendEmail(email, 'Reset Password', `Your Reset OTP is ${otp}`);
+  await sendEmail(
+    email,
+    "Your CloudStack Verification Code",
+    `
+  <div style="font-family: sans-serif; text-align: center;">
+    <h2>OTP For Reset Your  Password</h2>
+    <p>Use the code below to reset your password.</p>
+    <h1 style="font-size: 32px; letter-spacing: 5px; color: #4f46e5;">${otp}</h1>
+    <p>This code expires in 10 minutes.</p>
+  </div>
+  `,
+  );
+
   console.log(`[DEV MODE] Reset OTP for ${email}: ${otp}`);
 };
 
