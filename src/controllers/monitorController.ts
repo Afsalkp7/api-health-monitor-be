@@ -8,6 +8,7 @@ import {
   updateMonitorService,
   monitorGraphDataService,
   getRecentPingsData,
+  getDashboardData,
 } from "../services/monitorServices";
 
 export const createMonitor = async (req: Request, res: Response) => {
@@ -55,14 +56,14 @@ export const getMonitor = async (req: Request, res: Response) => {
   }
 };
 
-export const getMonitorGraphData = async (req: Request, res: Response ) => {
+export const getMonitorGraphData = async (req: Request, res: Response) => {
   try {
-    const monitorId : any = req.params.id;
-    const logs : any = await monitorGraphDataService(monitorId)
+    const monitorId: any = req.params.id;
+    const logs: any = await monitorGraphDataService(monitorId);
     // Reverse to show oldest -> newest on graph
     res.status(200).json({
       status: true,
-      data: logs.reverse()
+      data: logs.reverse(),
     });
   } catch (error: any) {
     res.internalServerError({ message: error.message });
@@ -125,16 +126,27 @@ export const updateMonitor = async (req: Request, res: Response) => {
   }
 };
 
-
-export const getRecentPings = async (req: Request, res: Response ) => {
+export const getRecentPings = async (req: Request, res: Response) => {
   try {
     const monitorId: any = req.params.id;
-    
-    const logs = await getRecentPingsData(monitorId)
+
+    const logs = await getRecentPingsData(monitorId);
     res.success({
-      data: logs
+      data: logs,
     });
-  } catch (error : any) {
+  } catch (error: any) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+export const getDashboardStats = async (req: Request, res: Response) => {
+  try {
+    const data: any = await getDashboardData();
+    
+    res.success({
+      data,
+    });
+  } catch (error: any) {
     res.status(500).json({ status: false, message: error.message });
   }
 };
