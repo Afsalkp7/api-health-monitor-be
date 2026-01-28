@@ -13,13 +13,13 @@ export const validate = (schema: Joi.ObjectSchema) =>
     
 
     if (error) {
-      const errorMessages = error.details.map((detail) => ({
+      const errorMessages : any = error.details.map((detail) => ({
         field: detail.path[0],
         message: detail.message.replace(/"/g, '') // Clean up Joi's quotes
       }));
 
       return res.validationError({ 
-        message: 'Validation Failed', 
+        message: errorMessages[0]?.message || "Validation Error", 
         data: errorMessages 
       });
     }
