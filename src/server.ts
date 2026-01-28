@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 import connectDB from './config/db';
 import app from './app';
+import { startMonitoringWorker } from './worker/monitorEngine';
+import { startAnalyticsWorker } from './worker/analyticsEngine';
 
 // Uncaught Exception Handling (Crash safety)
 process.on('uncaughtException', (err: Error) => {
@@ -10,19 +12,33 @@ process.on('uncaughtException', (err: Error) => {
   process.exit(1);
 });
 
-connectDB()
-// Start Server
-const PORT = process.env.PORT || 5000;
+const startServer = async () => {
+  try {
+    await connectDB(); 
+    console.log("Database connected successfully.");
 
-const server = app.listen(PORT, () => {
-  console.log(`Server listening on port: ${PORT}....`);
-});
+    console.log(" Starting Background Workers...");
+    startMonitoringWorker(); 
+    startAnalyticsWorker();  
 
-// Unhandled Rejection Handling (Promise failures)
-process.on('unhandledRejection', (err: Error) => {
-  console.log('UNHANDLED REJECTION! Shutting down...');
-  console.log(err.name, err.message);
-  server.close(() => {
+    const PORT = process.env.PORT || 5000;
+    const server = app.listen(PORT, () => {
+      console.log(` Server & Workers listening on port: ${PORT}....`);
+    });
+
+    process.on('unhandledRejection', (err: Error) => {
+      console.log('UNHANDLED REJECTION! Shutting down...');
+      console.log(err.name, err.message);
+      server.close(() => {
+        process.exit(1);
+      });
+    });
+
+  } catch (error) {
+    console.error("Failed to start server/workers.");
+    console.error(error);
     process.exit(1);
-  });
-});
+  }
+};
+
+startServer();
