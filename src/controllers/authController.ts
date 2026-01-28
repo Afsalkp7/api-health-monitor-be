@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import * as AuthService from "../services/authService";
-import connectDB from "../config/db";
+
 
 // 1. Register User
 export const register = async (
@@ -9,7 +9,6 @@ export const register = async (
   next: NextFunction,
 ) => {
   try {
-    await connectDB()
     const { email, password, name } = req?.body || {};
     const data = await AuthService.registerUser({ email, password, name });
     res.success({ message: "OTP sent to your email. Please verify.", data });

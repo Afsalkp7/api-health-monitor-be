@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import responseHandler from './utils/response/responseHandler';
 import indexRouter from './routes/index';
 import errorHandler from './middlewares/errorHandler';
+import connectDB from './config/db';
 
 const app: Application = express();
 
@@ -23,6 +24,7 @@ app.use(morgan('dev'));
 
 // Body Parser (Read JSON data from requests)
 app.use(express.json());
+
 
 // --- TESTING ONLY: Slow down all requests by 2 seconds ---
 // app.use((req, res, next) => {
