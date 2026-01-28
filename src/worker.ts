@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import { startMonitoringWorker } from './worker/monitorEngine';
+import { startAnalyticsWorker } from './worker/analyticsEngine';
 
 // Connect to Database
 const MONGO_URI = process.env.MONGO_URI || '';
@@ -17,6 +18,7 @@ const connectDB = async () => {
     
     // 3. Start the Engine ONCE DB is ready
     startMonitoringWorker();
+    startAnalyticsWorker();
     
   } catch (error) {
     console.error('❌ Worker DB Connection Error:', error);

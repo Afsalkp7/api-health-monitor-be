@@ -24,6 +24,13 @@ app.use(morgan('dev'));
 // Body Parser (Read JSON data from requests)
 app.use(express.json());
 
+// --- TESTING ONLY: Slow down all requests by 2 seconds ---
+// app.use((req, res, next) => {
+//   const delay = 2000; // 2 seconds
+//   setTimeout(() => {
+//     next();
+//   }, delay);
+// });
 
 app.get('/', (req: Request, res: Response) => {
   res.success({ message: 'Cloudstack api monitor Server is Running successfully!' })

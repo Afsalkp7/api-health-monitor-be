@@ -247,3 +247,30 @@ export const logout = async (
     next(error);
   }
 };
+
+// Update profile
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.body;
+    const userId : any = req.user?.id;
+
+    const user = await AuthService.updateUserName(userId, name)
+
+    res.success({ data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId: any = req.user?.id;
+
+    await AuthService.changeUserPassword(userId, currentPassword, newPassword);
+
+    res.success({ message: "Password updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};

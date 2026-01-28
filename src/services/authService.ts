@@ -243,3 +243,36 @@ export const resendOtp = async (email: string) => {
   // TODO: await sendEmail(...)
   console.log(`[DEV MODE] New OTP for ${email}: ${otp}`);
 };
+
+export const updateUserName = async ( userId: string, name: string ) => {
+   const user : any = await User.findByIdAndUpdate(
+      userId, 
+      { name }, 
+      { new: true, runValidators: true }
+    ).select("-password -otp -otpExpires");
+
+    return user
+}
+
+export const changeUserPassword = async (userId: string, currentPass: string, newPass: string) => {
+  // 1. Find user and explicitly select the password field (usually hidden)
+  const user = await User.findById(userId).select("+password");
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // 2. Verify the current password
+  const isMatch = await bcrypt.compare(currentPass, user.password);
+  if (!isMatch) {
+    throw new AppError("Incorrect current password", 401);
+  }
+
+  // 3. Hash the new password
+  const hashedPassword = await bcrypt.hash(newPass, 10);
+
+  // 4. Update the user
+  await User.findByIdAndUpdate(userId, { password: hashedPassword });
+
+  return true;
+};
