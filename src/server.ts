@@ -2,8 +2,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 import connectDB from './config/db';
 import app from './app';
-import { startMonitoringWorker } from './worker/monitorEngine';
-import { startAnalyticsWorker } from './worker/analyticsEngine';
 
 // Uncaught Exception Handling (Crash safety)
 process.on('uncaughtException', (err: Error) => {
@@ -17,13 +15,9 @@ const startServer = async () => {
     await connectDB(); 
     console.log("Database connected successfully.");
 
-    console.log(" Starting Background Workers...");
-    startMonitoringWorker(); 
-    startAnalyticsWorker();  
-
     const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, () => {
-      console.log(` Server & Workers listening on port: ${PORT}....`);
+      console.log(` Server listening on port: ${PORT}....`);
     });
 
     process.on('unhandledRejection', (err: Error) => {

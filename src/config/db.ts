@@ -32,7 +32,6 @@ if (!cached) {
 async function connectDB() {
     // 1. If we are already connected, return the existing connection
     if (cached.conn) {
-        // console.log("🟢 [DB] Using cached connection"); // Optional: Uncomment to see per-request
         return cached.conn;
     }
 
@@ -42,11 +41,10 @@ async function connectDB() {
             bufferCommands: false,
         };
 
-        // LOGGING HERE: This will show up only on the FIRST request
-        console.log("🟡 [DB] Initializing new connection..."); 
+        console.log("Initializing new connection..."); 
 
         cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-            console.log("🟢 [DB] Connected to MongoDB successfully!");
+            console.log("Connected to MongoDB successfully!");
             return mongoose;
         });
     }
@@ -55,7 +53,7 @@ async function connectDB() {
         cached.conn = await cached.promise;
     } catch (e) {
         cached.promise = null;
-        console.error("🔴 [DB] Connection failed:", e);
+        console.error("DB Connection failed:", e);
         throw e;
     }
 

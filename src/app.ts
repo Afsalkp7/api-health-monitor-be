@@ -15,7 +15,7 @@ app.use(helmet());
 
 app.use(async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await connectDB(); // Uses the cached connection (won't reconnect if already active)
+    await connectDB();
     next();
   } catch (error) {
     console.error("Database connection failed in middleware:", error);
