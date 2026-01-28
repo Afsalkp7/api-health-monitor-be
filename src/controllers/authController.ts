@@ -1,0 +1,276 @@
+import { Request, Response, NextFunction } from "express";
+import * as AuthService from "../services/authService";
+
+// 1. Register User
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, password, name } = req?.body || {};
+    const data = await AuthService.registerUser({ email, password, name });
+    res.success({ message: "OTP sent to your email. Please verify.", data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 2. Verify OTP
+// export const verifyOtp = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { email, otp } = req.body;
+//     const data = await AuthService.verifyUserOtp(email, otp);
+
+//     // Set the Refresh Token Cookie so the user is truly "logged in"
+//     res.cookie("refreshToken", data.refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "strict",
+//       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+
+//     res.success({
+//       message: "Email verified successfully.",
+//       data: {
+//         user: data.user,
+//         accessToken: data.accessToken,
+//       },
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+export const verifyOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp } = req.body;
+    const data = await AuthService.verifyUserOtp(email, otp);
+
+    // Set HTTP-Only Cookie
+    res.cookie("refreshToken", data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.success({
+      message: "Email verified successfully.",
+      data: {
+        user: data.user,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken, // <--- ADDED: Critical for NextAuth
+        expiresIn: data.expiresIn        // <--- ADDED: Critical for NextAuth
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// 3. Resend OTP
+export const sendOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+    await AuthService.resendOtp(email);
+    res.success({ message: "OTP resent successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 4. Login User
+// export const loginUser = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { email, password } = req.body;
+//     const data = await AuthService.loginUser(email, password);
+
+//     res.cookie("refreshToken", data.refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === "production",
+//       sameSite: "strict",
+//       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+    
+//     res.success({
+//       message: "Login successful.",
+//       data: { user: data.user, accessToken: data.accessToken , refreshToken: data.refreshToken },
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, password } = req.body;
+    const data = await AuthService.loginUser(email, password);
+
+    // Set HTTP-Only Cookie (Good for browser security)
+    res.cookie("refreshToken", data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.success({
+      message: "Login successful.",
+      data: { 
+        user: data.user, 
+        accessToken: data.accessToken, 
+        refreshToken: data.refreshToken, // Frontend needs this for NextAuth session
+        expiresIn: data.expiresIn        // Frontend needs this for expiry calculation
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 5. Get New Access Token (Refresh)
+// export const getAccessToken = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { refreshToken } = req.cookies|| req.body?.refreshToken; // Get from cookie
+//     if (!refreshToken) throw new Error("Refresh Token Required");
+
+//     const accessToken = await AuthService.refreshAccessToken(refreshToken);
+//     res.success({ data: { accessToken, refreshToken } });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+export const getAccessToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    // Check Cookies FIRST, then check Body (Support both Browser & NextAuth server-side calls)
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (!incomingRefreshToken) {
+      throw new Error("Refresh Token Required");
+    }
+
+    // Call Service
+    const data = await AuthService.refreshAccessToken(incomingRefreshToken);
+
+    // Set the NEW Refresh Token as a cookie (Rotation)
+    res.cookie("refreshToken", data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Return the tokens to the client
+    res.success({ 
+      message: "Token refreshed.",
+      data: { 
+        accessToken: data.accessToken, 
+        refreshToken: data.refreshToken, // Send back new rotation token
+        expiresIn: data.expiresIn 
+      } 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 6. Forgot Password
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+    await AuthService.requestPasswordReset(email);
+    res.success({ message: "Password reset OTP sent to email." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 7. Reset Password
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp, password } = req.body;
+    await AuthService.resetPassword(email, otp, password);
+    res.success({ message: "Password has been reset successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 8. Logout
+export const logout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    res.clearCookie("refreshToken");
+    res.success({ message: "Logged out successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update profile
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.body;
+    const userId : any = req.user?.id;
+
+    const user = await AuthService.updateUserName(userId, name)
+
+    res.success({ data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId: any = req.user?.id;
+
+    await AuthService.changeUserPassword(userId, currentPassword, newPassword);
+
+    res.success({ message: "Password updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};

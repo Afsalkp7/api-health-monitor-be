@@ -3,30 +3,32 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
-  "start": "node dist/server.js",
-  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-  "build": "tsc",
-  "lint": "eslint src/**/*.ts"
-},
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "dev:worker": "nodemon src/worker.ts",
+    "start:worker": "node dist/worker.js",
+    "lint": "eslint src/**/*.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "axios": "^1.13.2",
+    "axios": "^1.13.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
+    "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.21.1",
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.12",
-    "winston": "^3.19.0",
-    "zod": "^4.3.6"
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
