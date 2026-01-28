@@ -12,6 +12,17 @@ const app: Application = express();
 
 // Global Middleware
 app.use(helmet());
+
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await connectDB(); // Uses the cached connection (won't reconnect if already active)
+    next();
+  } catch (error) {
+    console.error("Database connection failed in middleware:", error);
+    res.status(500).json({ status: false, message: "Database Connection Error" });
+  }
+});
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
