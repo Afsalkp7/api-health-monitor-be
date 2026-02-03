@@ -142,7 +142,7 @@ export const loginUser = async (email: string, pass: string) => {
     user: { id: user._id, name: user.name, email: user.email },
     accessToken,
     refreshToken,
-    expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS, // <--- ADDED THIS
+    expiresIn: ACCESS_TOKEN_EXPIRY_SECONDS,
   };
 };
 

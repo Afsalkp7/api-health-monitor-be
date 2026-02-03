@@ -17,9 +17,9 @@ const startServer = async () => {
     await connectDB(); 
     console.log("Database connected successfully.");
 
-    console.log(" Starting Background Workers...");
-    startMonitoringWorker(); 
-    startAnalyticsWorker();  
+    // console.log(" Starting Background Workers...");
+    // startMonitoringWorker(); 
+    // startAnalyticsWorker();  
 
     const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, () => {

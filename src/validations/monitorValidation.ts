@@ -7,7 +7,7 @@ export const monitorSchema = Joi.object({
   }),
 
   url: Joi.string()
-    .uri({ scheme: ["http", "https"] }) // Enforces http:// or https://
+    .uri({ scheme: ["http", "https"] })
     .required()
     .messages({
       "string.uri": "URL must be a valid http or https link",
@@ -26,9 +26,8 @@ export const monitorSchema = Joi.object({
     )
     .default([]),
 
-  body: Joi.any().default({}), // Allows any JSON structure
+  body: Joi.any().default({}), 
 
-  // Only allow specific intervals (1m, 5m, 10m, 30m)
   frequency: Joi.number()
     .valid(10, 20, 60, 300, 600, 1800)
     .required()
